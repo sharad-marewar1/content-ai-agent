@@ -4,10 +4,29 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/content-ai-agent', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ Connected to MongoDB'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
+
+// Import models
+const User = require('./models/User');
+const Content = require('./models/Content');
+const Analytics = require('./models/Analytics');
+
+// Make models available globally for routes
+global.User = User;
+global.Content = Content;
+global.Analytics = Analytics;
 
 // Middleware
 app.use(helmet());
@@ -37,7 +56,11 @@ app.use('/api/analytics', require('./routes/analytics'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 // Serve static files in production
@@ -60,4 +83,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Content AI Agent server running on port ${PORT}`);
   console.log(`💰 Ready to generate revenue!`);
+  console.log(`📊 MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
 });
